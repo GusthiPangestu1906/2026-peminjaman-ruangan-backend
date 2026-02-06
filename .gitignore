@@ -1,0 +1,27 @@
+# Visual Studio Build Outputs
+bin/
+obj/
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider & JetBrains
+.idea/
+
+# Visual Studio Code
+.vscode/
+
+# User-specific files & Secrets
+.env
+.env.*
+appsettings.Development.json
+secrets.json
+
+# Packages
+[Pp]ackages/
+*.nuget
+node_modules/
+
+# OS specific files
+.DS_Store
+Thumbs.db
