@@ -10,6 +10,7 @@ namespace _2026_peminjaman_ruangan_backend.Data
         }
 
         public DbSet<Room> Rooms { get; set; }
+        public DbSet<Peminjaman> Peminjamans { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
