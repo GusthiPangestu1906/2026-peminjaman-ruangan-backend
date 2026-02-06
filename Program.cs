@@ -3,29 +3,23 @@ using _2026_peminjaman_ruangan_backend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Tambahkan dukungan untuk Controller agar RoomController bisa dideteksi
-builder.Services.AddControllers(); 
+// Add services
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(); // Pastikan tidak ada 'using' tambahan di atas jika merah
 
-// 2. Konfigurasi Swagger/OpenAPI
-builder.Services.AddOpenApi();
-
-// 3. Konfigurasi Database PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
-// 4. Konfigurasi HTTP request pipeline
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-// 5. Penting: MapControllers agar rute [Route("api/[controller]")] bisa diproses
-app.MapControllers(); 
-
+app.MapControllers();
 app.Run();
