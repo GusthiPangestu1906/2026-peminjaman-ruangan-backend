@@ -59,4 +59,23 @@ public class PeminjamanController : ControllerBase
 
         return NoContent(); // Mengembalikan 204 No Content
     }
+
+    // GET: api/peminjaman/status/Pending
+    [HttpGet("status/{status}")]
+    public async Task<ActionResult<IEnumerable<Peminjaman>>> GetPeminjamanByStatus(string status)
+    {
+        // Menggunakan .ToLower() agar filter tidak sensitif terhadap huruf besar/kecil (Case Insensitive)
+        var data = await _context.Peminjamans
+            .Include(p => p.Room) // Tetap sertakan info ruangan sesuai AC
+            .Where(p => p.Status.ToLower() == status.ToLower())
+            .ToListAsync();
+
+        // Jika data kosong, berikan pesan informatif
+        if (data == null || data.Count == 0)
+        {
+            return NotFound(new { message = $"Tidak ada data peminjaman dengan status: {status}" });
+        }
+
+        return Ok(data);
+    }
 }
