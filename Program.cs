@@ -3,23 +3,44 @@ using _2026_peminjaman_ruangan_backend.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services
+// 1. DAFTARKAN SERVICES
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(); // Pastikan tidak ada 'using' tambahan di atas jika merah
+builder.Services.AddSwaggerGen();
 
+// 2. KONFIGURASI DATABASE (PostgreSQL)
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// 3. KONFIGURASI CORS (PENTING: Agar Frontend bisa akses API)
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReact",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5173") // Port React
+                  .AllowAnyMethod()                    // Mengizinkan GET, POST, PATCH, dll.
+                  .AllowAnyHeader();                   // Mengizinkan header seperti Content-Type
+        });
+});
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 4. KONFIGURASI HTTP REQUEST PIPELINE
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// URUTAN INI SANGAT PENTING!
+// app.UseHttpsRedirection();
+
+// Aktifkan CORS sebelum Authorization
+app.UseCors("AllowReact"); 
+
+app.UseAuthorization();
+
 app.MapControllers();
+
 app.Run();
