@@ -16,17 +16,33 @@ public class PeminjamanController : ControllerBase
         _context = context;
     }
 
+    // GET: api/peminjaman
+    // Mengambil semua data peminjaman beserta detail ruangannya
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Peminjaman>>> GetPeminjaman()
     {
         return await _context.Peminjamans.Include(p => p.Room).ToListAsync();
     }
 
-    // LOGIKA 2: Collision Validation (Conflict Handling)
+    // POST: api/peminjaman
+    // Menambah peminjaman baru dengan validasi data dan cek bentrok jadwal
     [HttpPost]
     public async Task<ActionResult<Peminjaman>> PostPeminjaman(Peminjaman peminjaman)
     {
-        // Sistem menolak jika RoomId dan TanggalPinjam bentrok dengan status 'Approved'
+        // 1. Validasi Input: Pastikan Nama dan Keperluan tidak kosong
+        // Note: RoomId <= 0 diasumsikan tidak valid karena ID database biasanya mulai dari 1
+        if (string.IsNullOrWhiteSpace(peminjaman.Peminjam) || 
+            // string.IsNullOrWhiteSpace(peminjaman.Keperluan) || // Aktifkan jika ada field Keperluan
+            peminjaman.RoomId <= 0)
+        {
+            return BadRequest(new { message = "Data tidak lengkap. Nama Peminjam dan RoomId wajib diisi." });
+        }
+
+        // 2. Security: Paksa status default jadi "Pending"
+        // Mencegah user mengirim status "Approved" langsung dari API client
+        peminjaman.Status = "Pending";
+
+        // 3. Logic Collision: Cek apakah ruangan sudah dipinjam di tanggal yang sama dengan status Approved
         var isConflict = await _context.Peminjamans
             .AnyAsync(p => p.RoomId == peminjaman.RoomId && 
                            p.TanggalPinjam.Date == peminjaman.TanggalPinjam.Date && 
@@ -34,43 +50,51 @@ public class PeminjamanController : ControllerBase
 
         if (isConflict)
         {
-            return BadRequest(new { message = "Ruangan sudah ter-booking pada tanggal tersebut." });
+            return BadRequest(new { message = "Ruangan sudah ter-booking (Approved) pada tanggal tersebut." });
         }
 
         _context.Peminjamans.Add(peminjaman);
         await _context.SaveChangesAsync();
+
+        // Mengembalikan respons 201 Created beserta lokasi data baru
         return CreatedAtAction(nameof(GetPeminjaman), new { id = peminjaman.Id }, peminjaman);
     }
 
-    // LOGIKA 1: Approval System (PATCH Method)
+    // PATCH: api/peminjaman/{id}/status
+    // Mengubah status peminjaman (Approve/Reject)
     [HttpPatch("{id}/status")]
-    public async Task<IActionResult> UpdateStatus(int id, [FromBody] string newStatus)
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] StatusUpdateDto dto)
     {
+        // Validasi payload body tidak boleh kosong
+        if (dto == null || string.IsNullOrWhiteSpace(dto.Status))
+            return BadRequest("Status tidak valid.");
+
+        var newStatus = dto.Status;
         var data = await _context.Peminjamans.FindAsync(id);
+        
         if (data == null) return NotFound();
 
-        // Validasi input status
+        // Validasi nilai status yang diperbolehkan
         var validStatuses = new List<string> { "Pending", "Approved", "Rejected" };
         if (!validStatuses.Contains(newStatus)) 
-            return BadRequest("Status tidak valid.");
+            return BadRequest("Status harus berupa: Pending, Approved, atau Rejected.");
 
         data.Status = newStatus;
         await _context.SaveChangesAsync();
 
-        return NoContent(); // Mengembalikan 204 No Content
+        return NoContent(); // 204 No Content (Sukses tanpa body)
     }
 
-    // GET: api/peminjaman/status/Pending
+    // GET: api/peminjaman/status/{status}
+    // Filter data berdasarkan status (Case Insensitive)
     [HttpGet("status/{status}")]
     public async Task<ActionResult<IEnumerable<Peminjaman>>> GetPeminjamanByStatus(string status)
     {
-        // Menggunakan .ToLower() agar filter tidak sensitif terhadap huruf besar/kecil (Case Insensitive)
         var data = await _context.Peminjamans
-            .Include(p => p.Room) // Tetap sertakan info ruangan sesuai AC
+            .Include(p => p.Room)
             .Where(p => p.Status.ToLower() == status.ToLower())
             .ToListAsync();
 
-        // Jika data kosong, berikan pesan informatif
         if (data == null || data.Count == 0)
         {
             return NotFound(new { message = $"Tidak ada data peminjaman dengan status: {status}" });
