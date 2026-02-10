@@ -19,33 +19,41 @@ public class PeminjamanController : ControllerBase
     // GET: api/peminjaman
     // Mengambil semua data peminjaman beserta detail ruangannya
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Peminjaman>>> GetPeminjaman()
+    public async Task<ActionResult<IEnumerable<PeminjamanDetailDto>>> GetPeminjaman()
     {
-        return await _context.Peminjamans.Include(p => p.Room).ToListAsync();
+        var data = await _context.Peminjamans.Include(p => p.Room).ToListAsync();
+        
+        var dtos = data.Select(p => new PeminjamanDetailDto
+        {
+            Id = p.Id,
+            RoomId = p.RoomId,
+            Room = p.Room,
+            Peminjam = p.Peminjam,
+            TanggalPinjam = p.TanggalPinjam,
+            Status = p.Status,
+            Keperluan = p.Keperluan
+        }).ToList();
+
+        return Ok(dtos);
     }
 
     // POST: api/peminjaman
     // Menambah peminjaman baru dengan validasi data dan cek bentrok jadwal
     [HttpPost]
-    public async Task<ActionResult<Peminjaman>> PostPeminjaman(Peminjaman peminjaman)
+    public async Task<ActionResult<PeminjamanDetailDto>> PostPeminjaman(PeminjamanDto peminjamanDto)
     {
         // 1. Validasi Input: Pastikan Nama dan Keperluan tidak kosong
         // Note: RoomId <= 0 diasumsikan tidak valid karena ID database biasanya mulai dari 1
-        if (string.IsNullOrWhiteSpace(peminjaman.Peminjam) || 
-            // string.IsNullOrWhiteSpace(peminjaman.Keperluan) || // Aktifkan jika ada field Keperluan
-            peminjaman.RoomId <= 0)
+        if (string.IsNullOrWhiteSpace(peminjamanDto.Peminjam) || 
+            peminjamanDto.RoomId <= 0)
         {
             return BadRequest(new { message = "Data tidak lengkap. Nama Peminjam dan RoomId wajib diisi." });
         }
 
-        // 2. Security: Paksa status default jadi "Pending"
-        // Mencegah user mengirim status "Approved" langsung dari API client
-        peminjaman.Status = "Pending";
-
-        // 3. Logic Collision: Cek apakah ruangan sudah dipinjam di tanggal yang sama dengan status Approved
+        // 2. Logic Collision: Cek apakah ruangan sudah dipinjam di tanggal yang sama dengan status Approved
         var isConflict = await _context.Peminjamans
-            .AnyAsync(p => p.RoomId == peminjaman.RoomId && 
-                           p.TanggalPinjam.Date == peminjaman.TanggalPinjam.Date && 
+            .AnyAsync(p => p.RoomId == peminjamanDto.RoomId && 
+                           p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date && 
                            p.Status == "Approved");
 
         if (isConflict)
@@ -53,11 +61,35 @@ public class PeminjamanController : ControllerBase
             return BadRequest(new { message = "Ruangan sudah ter-booking (Approved) pada tanggal tersebut." });
         }
 
+        // Mapping DTO ke Entity
+        var peminjaman = new Peminjaman
+        {
+            RoomId = peminjamanDto.RoomId,
+            Peminjam = peminjamanDto.Peminjam,
+            TanggalPinjam = peminjamanDto.TanggalPinjam,
+            Keperluan = peminjamanDto.Keperluan,
+            Status = "Pending" // Default status
+        };
+
         _context.Peminjamans.Add(peminjaman);
         await _context.SaveChangesAsync();
 
+        // Load Room untuk response
+        await _context.Entry(peminjaman).Reference(p => p.Room).LoadAsync();
+
+        var resultDto = new PeminjamanDetailDto
+        {
+            Id = peminjaman.Id,
+            RoomId = peminjaman.RoomId,
+            Room = peminjaman.Room,
+            Peminjam = peminjaman.Peminjam,
+            TanggalPinjam = peminjaman.TanggalPinjam,
+            Status = peminjaman.Status,
+            Keperluan = peminjaman.Keperluan
+        };
+
         // Mengembalikan respons 201 Created beserta lokasi data baru
-        return CreatedAtAction(nameof(GetPeminjaman), new { id = peminjaman.Id }, peminjaman);
+        return CreatedAtAction(nameof(GetPeminjaman), new { id = peminjaman.Id }, resultDto);
     }
 
     // PATCH: api/peminjaman/{id}/status
@@ -88,7 +120,7 @@ public class PeminjamanController : ControllerBase
     // GET: api/peminjaman/status/{status}
     // Filter data berdasarkan status (Case Insensitive)
     [HttpGet("status/{status}")]
-    public async Task<ActionResult<IEnumerable<Peminjaman>>> GetPeminjamanByStatus(string status)
+    public async Task<ActionResult<IEnumerable<PeminjamanDetailDto>>> GetPeminjamanByStatus(string status)
     {
         var data = await _context.Peminjamans
             .Include(p => p.Room)
@@ -100,6 +132,84 @@ public class PeminjamanController : ControllerBase
             return NotFound(new { message = $"Tidak ada data peminjaman dengan status: {status}" });
         }
 
-        return Ok(data);
+        var dtos = data.Select(p => new PeminjamanDetailDto
+        {
+            Id = p.Id,
+            RoomId = p.RoomId,
+            Room = p.Room,
+            Peminjam = p.Peminjam,
+            TanggalPinjam = p.TanggalPinjam,
+            Status = p.Status,
+            Keperluan = p.Keperluan
+        }).ToList();
+
+        return Ok(dtos);
+    }
+
+    // GET: api/peminjaman/{id}
+    // Melihat detail satu peminjaman
+    [HttpGet("{id}")]
+    public async Task<ActionResult<PeminjamanDetailDto>> GetPeminjaman(int id)
+    {
+        var peminjaman = await _context.Peminjamans.Include(p => p.Room).FirstOrDefaultAsync(p => p.Id == id);
+
+        if (peminjaman == null)
+        {
+            return NotFound();
+        }
+
+        var dto = new PeminjamanDetailDto
+        {
+            Id = peminjaman.Id,
+            RoomId = peminjaman.RoomId,
+            Room = peminjaman.Room,
+            Peminjam = peminjaman.Peminjam,
+            TanggalPinjam = peminjaman.TanggalPinjam,
+            Status = peminjaman.Status,
+            Keperluan = peminjaman.Keperluan
+        };
+
+        return dto;
+    }
+
+    // PUT: api/peminjaman/{id}
+    // Mengubah data peminjaman (Edit Full)
+    [HttpPut("{id}")]
+    public async Task<IActionResult> PutPeminjaman(int id, PeminjamanDto peminjamanDto)
+    {
+        var peminjaman = await _context.Peminjamans.FindAsync(id);
+        if (peminjaman == null) return NotFound();
+
+        // Update field yang diperbolehkan saja
+        peminjaman.RoomId = peminjamanDto.RoomId;
+        peminjaman.Peminjam = peminjamanDto.Peminjam;
+        peminjaman.TanggalPinjam = peminjamanDto.TanggalPinjam;
+        peminjaman.Keperluan = peminjamanDto.Keperluan;
+        
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!_context.Peminjamans.Any(e => e.Id == id)) return NotFound();
+            else throw;
+        }
+
+        return NoContent();
+    }
+
+    // DELETE: api/peminjaman/{id}
+    // Menghapus data peminjaman
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePeminjaman(int id)
+    {
+        var peminjaman = await _context.Peminjamans.FindAsync(id);
+        if (peminjaman == null) return NotFound();
+
+        _context.Peminjamans.Remove(peminjaman);
+        await _context.SaveChangesAsync();
+
+        return NoContent();
     }
 }
