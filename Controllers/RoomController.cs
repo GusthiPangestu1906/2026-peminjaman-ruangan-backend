@@ -26,7 +26,8 @@ public class RoomController : ControllerBase
             Id = r.Id,
             Name = r.Name,
             Capacity = r.Capacity,
-            Location = r.Location
+            Location = r.Location,
+            IsAvailable = r.IsAvailable
         }).ToList();
 
         return Ok(dtos);

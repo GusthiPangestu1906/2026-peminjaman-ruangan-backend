@@ -41,7 +41,8 @@ public class PeminjamanController : ControllerBase
                 Id = p.Room.Id,
                 Name = p.Room.Name,
                 Capacity = p.Room.Capacity,
-                Location = p.Room.Location
+                Location = p.Room.Location,
+                IsAvailable = p.Room.IsAvailable
             },
             Peminjam = p.Peminjam,
             TanggalPinjam = p.TanggalPinjam,
@@ -107,7 +108,8 @@ public class PeminjamanController : ControllerBase
                 Id = peminjaman.Room.Id,
                 Name = peminjaman.Room.Name,
                 Capacity = peminjaman.Room.Capacity,
-                Location = peminjaman.Room.Location
+                Location = peminjaman.Room.Location,
+                IsAvailable = peminjaman.Room.IsAvailable
             },
             Peminjam = peminjaman.Peminjam,
             TanggalPinjam = peminjaman.TanggalPinjam,
@@ -168,7 +170,8 @@ public class PeminjamanController : ControllerBase
                 Id = p.Room.Id,
                 Name = p.Room.Name,
                 Capacity = p.Room.Capacity,
-                Location = p.Room.Location
+                Location = p.Room.Location,
+                IsAvailable = p.Room.IsAvailable
             },
             Peminjam = p.Peminjam,
             TanggalPinjam = p.TanggalPinjam,
@@ -200,7 +203,8 @@ public class PeminjamanController : ControllerBase
                 Id = peminjaman.Room.Id,
                 Name = peminjaman.Room.Name,
                 Capacity = peminjaman.Room.Capacity,
-                Location = peminjaman.Room.Location
+                Location = peminjaman.Room.Location,
+                IsAvailable = peminjaman.Room.IsAvailable
             },
             Peminjam = peminjaman.Peminjam,
             TanggalPinjam = peminjaman.TanggalPinjam,
