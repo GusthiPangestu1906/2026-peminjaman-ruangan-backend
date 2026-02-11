@@ -19,15 +19,30 @@ public class PeminjamanController : ControllerBase
     // GET: api/peminjaman
     // Mengambil semua data peminjaman beserta detail ruangannya
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<PeminjamanDetailDto>>> GetPeminjaman()
+    public async Task<ActionResult<IEnumerable<PeminjamanDetailDto>>> GetPeminjaman([FromQuery] string? search)
     {
-        var data = await _context.Peminjamans.Include(p => p.Room).ToListAsync();
+        var query = _context.Peminjamans.Include(p => p.Room).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            search = search.ToLower();
+            query = query.Where(p => p.Peminjam.ToLower().Contains(search) || 
+                                     p.Keperluan.ToLower().Contains(search));
+        }
+
+        var data = await query.ToListAsync();
         
         var dtos = data.Select(p => new PeminjamanDetailDto
         {
             Id = p.Id,
             RoomId = p.RoomId,
-            Room = p.Room,
+            Room = p.Room == null ? null : new RoomDto 
+            {
+                Id = p.Room.Id,
+                Name = p.Room.Name,
+                Capacity = p.Room.Capacity,
+                Location = p.Room.Location
+            },
             Peminjam = p.Peminjam,
             TanggalPinjam = p.TanggalPinjam,
             Status = p.Status,
@@ -48,6 +63,12 @@ public class PeminjamanController : ControllerBase
             peminjamanDto.RoomId <= 0)
         {
             return BadRequest(new { message = "Data tidak lengkap. Nama Peminjam dan RoomId wajib diisi." });
+        }
+
+        // Validasi Tanggal: Tidak boleh masa lalu
+        if (peminjamanDto.TanggalPinjam < DateTime.Now)
+        {
+            return BadRequest(new { message = "Tanggal peminjaman tidak boleh di masa lalu." });
         }
 
         // 2. Logic Collision: Cek apakah ruangan sudah dipinjam di tanggal yang sama dengan status Approved
@@ -81,7 +102,13 @@ public class PeminjamanController : ControllerBase
         {
             Id = peminjaman.Id,
             RoomId = peminjaman.RoomId,
-            Room = peminjaman.Room,
+            Room = peminjaman.Room == null ? null : new RoomDto
+            {
+                Id = peminjaman.Room.Id,
+                Name = peminjaman.Room.Name,
+                Capacity = peminjaman.Room.Capacity,
+                Location = peminjaman.Room.Location
+            },
             Peminjam = peminjaman.Peminjam,
             TanggalPinjam = peminjaman.TanggalPinjam,
             Status = peminjaman.Status,
@@ -136,7 +163,13 @@ public class PeminjamanController : ControllerBase
         {
             Id = p.Id,
             RoomId = p.RoomId,
-            Room = p.Room,
+            Room = p.Room == null ? null : new RoomDto
+            {
+                Id = p.Room.Id,
+                Name = p.Room.Name,
+                Capacity = p.Room.Capacity,
+                Location = p.Room.Location
+            },
             Peminjam = p.Peminjam,
             TanggalPinjam = p.TanggalPinjam,
             Status = p.Status,
@@ -162,7 +195,13 @@ public class PeminjamanController : ControllerBase
         {
             Id = peminjaman.Id,
             RoomId = peminjaman.RoomId,
-            Room = peminjaman.Room,
+            Room = peminjaman.Room == null ? null : new RoomDto
+            {
+                Id = peminjaman.Room.Id,
+                Name = peminjaman.Room.Name,
+                Capacity = peminjaman.Room.Capacity,
+                Location = peminjaman.Room.Location
+            },
             Peminjam = peminjaman.Peminjam,
             TanggalPinjam = peminjaman.TanggalPinjam,
             Status = peminjaman.Status,
@@ -179,6 +218,24 @@ public class PeminjamanController : ControllerBase
     {
         var peminjaman = await _context.Peminjamans.FindAsync(id);
         if (peminjaman == null) return NotFound();
+
+        // Validasi Tanggal: Tidak boleh masa lalu
+        if (peminjamanDto.TanggalPinjam < DateTime.Now)
+        {
+            return BadRequest(new { message = "Tanggal peminjaman tidak boleh di masa lalu." });
+        }
+
+        // Logic Collision: Cek apakah ruangan sudah dipinjam orang lain di tanggal yang sama dengan status Approved
+        var isConflict = await _context.Peminjamans
+            .AnyAsync(p => p.Id != id && // Penting: Abaikan data diri sendiri saat pengecekan
+                           p.RoomId == peminjamanDto.RoomId && 
+                           p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date && 
+                           p.Status == "Approved");
+
+        if (isConflict)
+        {
+            return BadRequest(new { message = "Gagal mengubah: Ruangan sudah ter-booking (Approved) pada tanggal tersebut." });
+        }
 
         // Update field yang diperbolehkan saja
         peminjaman.RoomId = peminjamanDto.RoomId;
