@@ -360,7 +360,7 @@ curl http://localhost:5215/api/peminjaman
 
 ## 📝 Version & Last Update
 
-- **Version**: 1.0.0
+- **Version**: 1.1.0
 - **Last Updated**: February 10, 2026
 - **Status**: ✅ Production Ready
 - **Maintainer**: Development Team
@@ -395,4 +395,3 @@ START HERE
 ---
 
 *Terima kasih telah menggunakan Sistem Peminjaman Ruangan! 🎓*
-
