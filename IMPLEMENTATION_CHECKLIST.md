@@ -11,6 +11,7 @@
   - RoomId valid (> 0)
   - Tanggal tidak masa lalu
   - Cek booking conflict
+  - **Limit 2 booking per user/hari**
 - ✅ **Response**: 201 Created dengan data peminjaman + FK Room detail
 
 ### Melihat Daftar Peminjaman
@@ -169,6 +170,8 @@
 
 - ✅ **RoomController.cs** - [Controllers/RoomController.cs](Controllers/RoomController.cs)
   - GET `/api/room` (List all rooms)
+  - GET `/api/room/available` (Check availability)
+  - GET `/api/room/{id}/bookings` (Check schedule)
 
 - ✅ **CustomerController.cs** - [Controllers/CustomerController.cs](Controllers/CustomerController.cs)
   - Customer management endpoints
@@ -187,6 +190,7 @@
 - ✅ **Validation**:
   - Input validation di controller
   - Data annotations di models
+  - **Business Logic**: Limit booking & Status-based collision
   - Custom business logic validation
 
 - ✅ **Error Handling**:
@@ -275,6 +279,7 @@
 | 4.3 | Controllers | ✅ | Controllers/ | PeminjamanController, RoomController |
 | 5.1 | Migration | ✅ | Migrations/ | 6 migrations sudah dibuat |
 | 5.2 | Data Seeding | ✅ | Migrations/ | 5 ruangan + 4 peminjaman + 2 customer |
+| 6.1 | Cek Ketersediaan | ✅ | RoomController.cs:L40 | GET /api/room/available |
 
 ---
 
@@ -348,4 +353,3 @@ GET /api/peminjaman?status=Pending&roomId=1&dateFrom=2026-02-10&dateTo=2026-02-2
 - ✅ PATCH /api/peminjaman/{id}/status
 - ✅ DELETE /api/peminjaman/{id}
 - ✅ GET /api/peminjaman/status/{status}
-

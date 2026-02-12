@@ -67,20 +67,34 @@ public class PeminjamanController : ControllerBase
         }
 
         // Validasi Tanggal: Tidak boleh masa lalu
-        if (peminjamanDto.TanggalPinjam < DateTime.Now)
+        if (peminjamanDto.TanggalPinjam < DateTime.UtcNow)
         {
             return BadRequest(new { message = "Tanggal peminjaman tidak boleh di masa lalu." });
         }
 
-        // 2. Logic Collision: Cek apakah ruangan sudah dipinjam di tanggal yang sama dengan status Approved
-        var isConflict = await _context.Peminjamans
-            .AnyAsync(p => p.RoomId == peminjamanDto.RoomId && 
-                           p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date && 
-                           p.Status == "Approved");
+        // 2. Logic Limit: Satu user maksimal 2 booking per hari
+        // Hitung booking user ini di tanggal yang sama (kecuali yang Rejected)
+        var userBookingCount = await _context.Peminjamans
+            .CountAsync(p => p.Peminjam.ToLower() == peminjamanDto.Peminjam.ToLower() && 
+                             p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date &&
+                             p.Status != "Rejected");
 
-        if (isConflict)
+        if (userBookingCount >= 2)
         {
-            return BadRequest(new { message = "Ruangan sudah ter-booking (Approved) pada tanggal tersebut." });
+            return BadRequest(new { message = $"Gagal: User {peminjamanDto.Peminjam} sudah mencapai batas maksimal 2 peminjaman pada tanggal tersebut." });
+        }
+
+        // 3. Logic Collision: Cek apakah ruangan sudah dipinjam (Status != Rejected)
+        // Artinya Pending dan Approved dianggap memblokir ruangan, hanya Rejected yang membebaskan ruangan.
+        var conflictingBooking = await _context.Peminjamans
+            .Include(p => p.Room)
+            .FirstOrDefaultAsync(p => p.RoomId == peminjamanDto.RoomId && 
+                           p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date && 
+                           p.Status != "Rejected");
+
+        if (conflictingBooking != null)
+        {
+            return BadRequest(new { message = $"Gagal: Ruangan {conflictingBooking.Room?.Name} sudah dibooking oleh {conflictingBooking.Peminjam} (Status: {conflictingBooking.Status})." });
         }
 
         // Mapping DTO ke Entity
@@ -224,21 +238,34 @@ public class PeminjamanController : ControllerBase
         if (peminjaman == null) return NotFound();
 
         // Validasi Tanggal: Tidak boleh masa lalu
-        if (peminjamanDto.TanggalPinjam < DateTime.Now)
+        if (peminjamanDto.TanggalPinjam < DateTime.UtcNow)
         {
             return BadRequest(new { message = "Tanggal peminjaman tidak boleh di masa lalu." });
         }
 
-        // Logic Collision: Cek apakah ruangan sudah dipinjam orang lain di tanggal yang sama dengan status Approved
-        var isConflict = await _context.Peminjamans
-            .AnyAsync(p => p.Id != id && // Penting: Abaikan data diri sendiri saat pengecekan
+        // Logic Limit: Cek limit user per hari (abaikan diri sendiri saat edit)
+        var userBookingCount = await _context.Peminjamans
+            .CountAsync(p => p.Id != id && 
+                             p.Peminjam.ToLower() == peminjamanDto.Peminjam.ToLower() && 
+                             p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date &&
+                             p.Status != "Rejected");
+
+        if (userBookingCount >= 2)
+        {
+            return BadRequest(new { message = $"Gagal mengubah: User {peminjamanDto.Peminjam} sudah mencapai batas maksimal 2 peminjaman pada tanggal tersebut." });
+        }
+
+        // Logic Collision: Cek apakah ruangan sudah dipinjam orang lain (Status != Rejected)
+        var conflictingBooking = await _context.Peminjamans
+            .Include(p => p.Room)
+            .FirstOrDefaultAsync(p => p.Id != id && // Penting: Abaikan data diri sendiri saat pengecekan
                            p.RoomId == peminjamanDto.RoomId && 
                            p.TanggalPinjam.Date == peminjamanDto.TanggalPinjam.Date && 
-                           p.Status == "Approved");
+                           p.Status != "Rejected");
 
-        if (isConflict)
+        if (conflictingBooking != null)
         {
-            return BadRequest(new { message = "Gagal mengubah: Ruangan sudah ter-booking (Approved) pada tanggal tersebut." });
+            return BadRequest(new { message = $"Gagal mengubah: Ruangan {conflictingBooking.Room?.Name} sudah dibooking oleh {conflictingBooking.Peminjam} (Status: {conflictingBooking.Status})." });
         }
 
         // Update field yang diperbolehkan saja

@@ -1,6 +1,23 @@
 @_2026_peminjaman_ruangan_backend_HostAddress = http://localhost:5215
 
-GET {{_2026_peminjaman_ruangan_backend_HostAddress}}/weatherforecast/
+### Get all rooms
+GET {{_2026_peminjaman_ruangan_backend_HostAddress}}/api/room
+Accept: application/json
+
+### Get available rooms for a specific date
+GET {{_2026_peminjaman_ruangan_backend_HostAddress}}/api/room/available?date=2026-02-15
+Accept: application/json
+
+### Get available rooms with room name filter
+GET {{_2026_peminjaman_ruangan_backend_HostAddress}}/api/room/available?date=2026-02-15&roomName=Aula
+Accept: application/json
+
+### Get available rooms with capacity filter
+GET {{_2026_peminjaman_ruangan_backend_HostAddress}}/api/room/available?date=2026-02-15&capacity=30
+Accept: application/json
+
+### Get all peminjaman
+GET {{_2026_peminjaman_ruangan_backend_HostAddress}}/api/Peminjaman
 Accept: application/json
 
 ###

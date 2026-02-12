@@ -123,7 +123,8 @@ Content-Type: application/json
 - ✅ Nama peminjam tidak boleh kosong
 - ✅ RoomId harus valid
 - ✅ Tanggal tidak boleh di masa lalu
-- ✅ Ruangan tidak boleh ter-booking (Approved) di tanggal yang sama
+- ✅ **Limit**: User maksimal melakukan 2 booking per hari
+- ✅ **Conflict**: Ruangan tidak boleh ter-booking (Pending/Approved) di tanggal yang sama
 
 **Response (201 Created):**
 ```json
@@ -141,7 +142,7 @@ Content-Type: application/json
 **Status Code:**
 - 201 Created: Berhasil membuat peminjaman
 - 400 Bad Request: Validasi gagal
-- 409 Conflict: Ruangan sudah di-booking pada tanggal tersebut
+- 400 Bad Request: Ruangan conflict atau limit user tercapai
 
 ---
 
