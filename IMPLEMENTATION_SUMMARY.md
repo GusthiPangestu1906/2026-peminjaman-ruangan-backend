@@ -24,6 +24,7 @@ Semua requirement dari Task Detail telah **diimplementasikan dengan sempurna**.
 - ✅ RoomId harus valid
 - ✅ Tanggal tidak boleh masa lalu
 - ✅ Deteksi booking conflict (tidak boleh duplicate di hari yang sama)
+- ✅ **Limit Booking**: Maksimal 2 peminjaman per user per hari
 
 **Response Format:**
 - ✅ Includes Room detail (nested object)
@@ -432,4 +433,3 @@ Semua requirement telah diimplementasikan dengan optimal:
 **Last Updated**: February 10, 2026
 **Status**: ✅ COMPLETE
 **Maintainer**: Development Team
-
