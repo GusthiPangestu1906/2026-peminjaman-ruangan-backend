@@ -13,16 +13,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // 3. KONFIGURASI CORS (PENTING: Agar Frontend bisa akses API)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowReact",
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:5173") // Port React
-                  .AllowAnyMethod()                    // Mengizinkan GET, POST, PATCH, dll.
-                  .AllowAnyHeader();                   // Mengizinkan header seperti Content-Type
-        });
-});
+builder.Services.AddCors();
 
 var app = builder.Build();
 
@@ -37,7 +28,10 @@ if (app.Environment.IsDevelopment())
 // app.UseHttpsRedirection();
 
 // Aktifkan CORS sebelum Authorization
-app.UseCors("AllowReact"); 
+app.UseCors(corsBuilder => corsBuilder
+    .AllowAnyOrigin()
+    .AllowAnyMethod()
+    .AllowAnyHeader());
 
 app.UseAuthorization();
 
